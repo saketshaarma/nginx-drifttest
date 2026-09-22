@@ -329,8 +329,14 @@ app.add_middleware(
 async def on_startup():
     await db.users.create_index("email", unique=True)
     await db.node_pairs.create_index("business_id")
-    await db.runs.create_index("node_pair_id")
+    await db.runs.create_index("mapping_id")
     await db.incidents.create_index("status")
+    # Reap runs left 'running' by a previous process restart
+    await db.runs.update_many(
+        {"status": "running"},
+        {"$set": {"status": "failed", "error": "Interrupted by server restart",
+                  "completed_at": datetime.now(timezone.utc).isoformat()}},
+    )
     await seed_admin()
     await load_all_schedules()
     start_scheduler()

@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 2 (multi-pair mapping + async compare). Backend: /app/backend/tests/backend_test.py updated for new pairs[] model + async compare polling; 8/8 tests pass. Frontend E2E via Playwright on public URL: login, business detail with demo mapping showing 2 DC↔DR pairs + dc-lb-01/dc-lb-02 hosts, MappingDialog dynamic pair rows (add-pair-btn, pair-dc-node-i, pair-dr-node-i, remove-pair-i with min 1 enforced), create/edit/delete flows, Run Compare returns immediately + navigates to Run Detail showing 'run-running' banner and polls until failed with per-pair error, seeded drift Run Detail shows MOCKED Freshdesk banner + pair-tab-0/1 selector + summary chips + filters + unified diff (worker_connections visible for nginx.conf), /runs listing shows '1/2' drifted info, Incidents page shows MOCKED tag, logout + auth guard both enforced.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/demo/seed", "issue": "Idempotent by name check but subsequent calls return an existing-marker payload — behavior is now idempotent (unchanged since iter 1; verified)."},
+      {"endpoint": "PUT /api/incidents/{id}/status", "issue": "Status is a query param (?status=...) rather than JSON body — unusual REST style, but now validates against {open,resolved,closed} and returns 400 otherwise (verified)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Businesses list", "issues": ["Card is not itself clickable — only the tiny 'Manage →' link navigates to the business detail. Whole card should probably be a click target for better UX."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional UX) Make the entire Business card on /businesses navigate to the detail page (currently only 'Manage →' link works)."
+  ],
+  "critical_code_review_comments": [
+    "server.py POST /api/node-pairs correctly rejects empty pairs list with 400 — good.",
+    "comparison.start_comparison launches asyncio.create_task without awaiting; run is persisted first, so if the process restarts mid-run the run stays in 'running' forever (no watchdog). Consider a stuck-run reaper or timestamp-based timeout.",
+    "comparison._compare_mapping_sync runs pairs sequentially inside asyncio.to_thread — for many pairs this could be slow. Consider parallelizing per-pair SSH via ThreadPoolExecutor.",
+    "server.py GET /api/runs strips 'pairs' via projection {'pairs':0} — good for listing perf.",
+    "clean_node_pair strips ssh_password_enc + _id and adds has_credentials — good; no secret leakage confirmed via tests.",
+    "RunDetail.jsx polling uses setTimeout with cancelled flag — clean; but if the run stays 'running' forever (backend crash mid-run) the UI polls indefinitely — see backend reaper suggestion above.",
+    "BusinessDetail MappingDialog: removePair uses array index as key which can cause stale input state on removal of middle rows (React key warning). Prefer a stable per-row id.",
+    "server.py is ~344 lines — still fine; below the 700 line threshold."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% of critical flows verified"},
+  "test_credentials": "admin@driftwatch.io / admin123 (matches /app/memory/test_credentials.md)",
+  "seed_data_creation": "Demo already seeded from iter 1; re-invoked /api/demo/seed which now returns already_seeded marker. Test created + deleted TEST_UI_Mapping (2 pairs) as part of the flow.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression suite at /app/backend/tests/backend_test.py includes the new multi-pair model + async compare polling test. Public URL: https://nginx-config-tracker.preview.emergentagent.com. Real SSH to demo hosts (dc-lb-*/dr-lb-*.acme.io) will always fail — that graceful failure with per-pair error banner is the correct behavior, not a bug. Use the pre-seeded drift run (status=drift) to validate diff viewer / pair selector / MOCKED incident banner.",
+  "rca of the issue": "N/A - no functional regressions found in iter 2."
+}

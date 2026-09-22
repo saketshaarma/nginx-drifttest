@@ -19,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const emptyPair = () => ({ dc_node: "", dr_node: "", port_dc: 22, port_dr: 22 });
+const emptyPair = () => ({ _key: crypto.randomUUID(), dc_node: "", dr_node: "", port_dc: 22, port_dr: 22 });
 const EMPTY = {
   name: "", folder: "/etc/nginx", ssh_username: "", ssh_password: "",
   pairs: [emptyPair()], schedule_enabled: false, schedule_interval_minutes: 60,
@@ -42,7 +42,7 @@ function MappingDialog({ open, onOpenChange, businessId, editing, onSaved }) {
     if (editing) {
       setForm({
         ...EMPTY, ...editing, ssh_password: "",
-        pairs: editing.pairs?.length ? editing.pairs.map((p) => ({ ...p })) : [emptyPair()],
+        pairs: editing.pairs?.length ? editing.pairs.map((p) => ({ ...p, _key: crypto.randomUUID() })) : [emptyPair()],
       });
     } else {
       setForm({ ...EMPTY, pairs: [emptyPair()] });
@@ -56,7 +56,9 @@ function MappingDialog({ open, onOpenChange, businessId, editing, onSaved }) {
 
   const save = async () => {
     if (!form.name.trim()) return toast.error("Mapping name is required");
-    const valid = form.pairs.filter((p) => p.dc_node.trim() && p.dr_node.trim());
+    const valid = form.pairs
+      .filter((p) => p.dc_node.trim() && p.dr_node.trim())
+      .map(({ _key, ...rest }) => rest);
     if (valid.length === 0) return toast.error("Add at least one DC↔DR pair");
     setSaving(true);
     try {
@@ -120,7 +122,7 @@ function MappingDialog({ open, onOpenChange, businessId, editing, onSaved }) {
                 <span></span>
               </div>
               {form.pairs.map((p, i) => (
-                <div key={i} data-testid={`pair-row-${i}`} className="grid grid-cols-[1fr_60px_16px_1fr_60px_28px] gap-2 items-center">
+                <div key={p._key} data-testid={`pair-row-${i}`} className="grid grid-cols-[1fr_60px_16px_1fr_60px_28px] gap-2 items-center">
                   <Input data-testid={`pair-dc-node-${i}`} value={p.dc_node} onChange={(e) => setPair(i, "dc_node", e.target.value)} placeholder="dc-lb-01" className="h-9 bg-[#111827] border-slate-700 font-mono text-sm" />
                   <Input data-testid={`pair-dc-port-${i}`} type="number" value={p.port_dc} onChange={(e) => setPair(i, "port_dc", parseInt(e.target.value) || 22)} className="h-9 bg-[#111827] border-slate-700 font-mono text-sm px-2" />
                   <ArrowRightLeft className="h-3.5 w-3.5 text-slate-600" />

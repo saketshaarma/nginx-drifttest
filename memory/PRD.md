@@ -28,14 +28,17 @@ User has a Python script (compare_nodes.py) that SSHes into pairs of nginx nodes
 
 ## Implemented (2026-06)
 - JWT auth (login/register/logout/me/refresh, brute-force lockout, seeded admin). [done]
-- Business CRUD + Node Pair CRUD (SSH creds encrypted at rest). [done]
-- Real paramiko SSH comparison engine (SHA256 + unified diff) via /api/node-pairs/{id}/compare. [done]
-- Scheduled comparisons (APScheduler, per-pair interval). [done]
-- Runs history + Run Detail with diff viewer, file filters, execution log. [done]
-- Mocked Freshdesk incident creation on drift + Incidents page with status management. [done]
+- Business CRUD. [done]
+- **Mapping** model = shared folder + SSH creds + list of **DC↔DR node pairs** (add/remove many); CRUD with encrypted SSH passwords. [done]
+- Real paramiko SSH comparison engine (SHA256 + unified diff) comparing every DC↔DR pair; runs **async in background** (endpoint returns a 'running' run instantly, Run Detail polls to completion). [done]
+- Scheduled comparisons (APScheduler, per-mapping interval). [done]
+- Runs history + Run Detail with **per-pair selector**, diff viewer, file filters, execution log, aggregated summary. [done]
+- Mocked Freshdesk incident: **one incident per mapping run** summarizing all drifted DC↔DR pairs; Incidents page with status management. [done]
 - Dashboard stats + recent runs/incidents. [done]
-- Demo seed (idempotent) for instant AHA with realistic nginx drift. [done]
-- Tested 100% backend (7/7) + all critical frontend flows.
+- Demo seed (idempotent) — 2-pair mapping (1 drift, 1 identical) for instant AHA. [done]
+- Stuck-run reaper on startup; stable React keys for pair rows. [done]
+- **Production Docker setup**: backend Dockerfile, multi-stage frontend Dockerfile (nginx serving built SPA + /api proxy), docker-compose (mongo+backend+frontend), .env.example, DEPLOYMENT.md. [done]
+- Tested: backend 8/8, all critical frontend flows.
 
 ## Backlog
 - P1: Real Freshdesk API integration (domain + API key) replacing the mock.

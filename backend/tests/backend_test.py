@@ -57,28 +57,47 @@ def test_business_crud(client):
     r = client.get(f"{BASE_URL}/api/businesses/{bid}")
     assert r.status_code == 200
 
-    # node-pair create
+    # node-pair (mapping) create with multiple DC<->DR pairs
     r = client.post(f"{BASE_URL}/api/node-pairs", json={
         "business_id": bid, "name": "TEST_np",
-        "node1": "10.0.0.1", "node2": "10.0.0.2",
-        "port1": 22, "port2": 22, "folder": "/etc/nginx",
+        "folder": "/etc/nginx",
         "ssh_username": "root", "ssh_password": "pw",
+        "pairs": [
+            {"dc_node": "10.0.0.1", "dr_node": "10.0.0.2", "port_dc": 22, "port_dr": 22},
+            {"dc_node": "10.0.1.1", "dr_node": "10.0.1.2", "port_dc": 22, "port_dr": 22},
+        ],
     })
-    assert r.status_code == 200
-    np_id = r.json()["id"]
-    assert "ssh_password_enc" not in r.json()
-    assert "ssh_password" not in r.json()
+    assert r.status_code == 200, r.text
+    body = r.json()
+    np_id = body["id"]
+    assert "ssh_password_enc" not in body
+    assert "ssh_password" not in body
+    assert len(body["pairs"]) == 2
+    assert all(p.get("id") for p in body["pairs"])
+
+    # rejects mapping with no pairs
+    r_bad = client.post(f"{BASE_URL}/api/node-pairs", json={
+        "business_id": bid, "name": "TEST_np_empty",
+        "folder": "/etc/nginx", "ssh_username": "root", "ssh_password": "pw",
+        "pairs": [],
+    })
+    assert r_bad.status_code == 400
 
     # node-pair list by business
     r = client.get(f"{BASE_URL}/api/node-pairs?business_id={bid}")
     assert r.status_code == 200
     assert any(p["id"] == np_id for p in r.json())
 
-    # node-pair update
+    # node-pair update including modifying pairs list
     r = client.put(f"{BASE_URL}/api/node-pairs/{np_id}",
-                   json={"name": "TEST_np2"})
-    assert r.status_code == 200
-    assert r.json()["name"] == "TEST_np2"
+                   json={"name": "TEST_np2",
+                         "pairs": [{"dc_node": "10.9.9.9", "dr_node": "10.9.9.10", "port_dc": 2222, "port_dr": 2222}]})
+    assert r.status_code == 200, r.text
+    updated = r.json()
+    assert updated["name"] == "TEST_np2"
+    assert len(updated["pairs"]) == 1
+    assert updated["pairs"][0]["dc_node"] == "10.9.9.9"
+    assert updated["pairs"][0]["port_dc"] == 2222
 
     # node-pair delete
     r = client.delete(f"{BASE_URL}/api/node-pairs/{np_id}")
@@ -129,14 +148,46 @@ def test_runs_and_incidents(client):
         assert r.json()["status"] == new_status
 
 
-def test_compare_endpoint_graceful_fail(client):
-    # find/create a nodepair, trigger compare, expect graceful (unreachable => failed)
+def test_compare_endpoint_async_returns_running(client):
+    # ensure demo mapping exists
+    client.post(f"{BASE_URL}/api/demo/seed")
     r = client.get(f"{BASE_URL}/api/node-pairs")
     pairs = r.json()
     if not pairs:
         pytest.skip("no node pairs")
     pid = pairs[0]["id"]
+    import time
+    t0 = time.time()
     r = client.post(f"{BASE_URL}/api/node-pairs/{pid}/compare")
-    assert r.status_code == 200
+    elapsed = time.time() - t0
+    assert r.status_code == 200, r.text
     body = r.json()
-    assert body["status"] in ("failed", "drift", "synced")
+    # Async: should return immediately as running
+    assert body["status"] == "running", body
+    assert elapsed < 5, f"compare returned in {elapsed}s (not async)"
+    run_id = body["id"]
+
+    # runs list is filterable by mapping_id
+    r = client.get(f"{BASE_URL}/api/runs?mapping_id={pid}")
+    assert r.status_code == 200
+    assert any(x["id"] == run_id for x in r.json())
+
+    # eventually completes (will be failed since hosts are fake)
+    for _ in range(30):
+        time.sleep(2)
+        rr = client.get(f"{BASE_URL}/api/runs/{run_id}")
+        assert rr.status_code == 200
+        if rr.json()["status"] != "running":
+            break
+    final = client.get(f"{BASE_URL}/api/runs/{run_id}").json()
+    assert final["status"] in ("failed", "drift", "synced"), final["status"]
+
+
+def test_incident_status_invalid_rejected(client):
+    r = client.get(f"{BASE_URL}/api/incidents")
+    inc = r.json()
+    if not inc:
+        pytest.skip("no incidents")
+    iid = inc[0]["id"]
+    r = client.put(f"{BASE_URL}/api/incidents/{iid}/status?status=bogus")
+    assert r.status_code == 400
