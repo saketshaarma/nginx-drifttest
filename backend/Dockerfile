@@ -10,9 +10,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc libffi-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-# emergentintegrations lives on a custom index; the extra-index keeps the build working
-RUN pip install --no-cache-dir --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ -r requirements.txt
+COPY requirements.docker.txt .
+RUN pip install --no-cache-dir -r requirements.docker.txt
 
 COPY . .
 
