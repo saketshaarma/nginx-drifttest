@@ -1,0 +1,94 @@
+{
+  "project_title": "Nginx Config Drift Tracker & ITSM (Freshdesk) Incident Command Center",
+  "app_type": "dashboard",
+  "archetype": "THE PERFORMANCE PRO (Tactical DevOps / SRE Operations Console)",
+  "theme": {
+    "default_mode": "dark",
+    "supported_modes": ["dark", "light"],
+    "primary_background": "#0B0F19",
+    "card_background": "#111827",
+    "surface_elevated": "#1F2937",
+    "border_color": "#1F2937",
+    "border_accent": "#374151"
+  },
+  "colors": {
+    "brand_primary": "#0EA5E9",
+    "brand_secondary": "#6366F1",
+    "status": {
+      "identical": {
+        "text": "#10B981",
+        "bg": "rgba(16, 185, 129, 0.12)",
+        "border": "rgba(16, 185, 129, 0.3)",
+        "label": "Synced / Identical"
+      },
+      "drifted": {
+        "text": "#EF4444",
+        "bg": "rgba(239, 68, 68, 0.12)",
+        "border": "rgba(239, 68, 68, 0.3)",
+        "label": "Config Drift Detected"
+      },
+      "only_node1": {
+        "text": "#F59E0B",
+        "bg": "rgba(245, 158, 11, 0.12)",
+        "border": "rgba(245, 158, 11, 0.3)",
+        "label": "Node 1 Only"
+      },
+      "only_node2": {
+        "text": "#8B5CF6",
+        "bg": "rgba(139, 92, 246, 0.12)",
+        "border": "rgba(139, 92, 246, 0.3)",
+        "label": "Node 2 Only"
+      },
+      "incident_raised": {
+        "text": "#06B6D4",
+        "bg": "rgba(6, 182, 212, 0.15)",
+        "border": "rgba(6, 182, 212, 0.4)",
+        "label": "Freshdesk Incident Created"
+      }
+    },
+    "diff": {
+      "addition_bg": "rgba(16, 185, 129, 0.18)",
+      "addition_text": "#34D399",
+      "deletion_bg": "rgba(239, 68, 68, 0.18)",
+      "deletion_text": "#F87171",
+      "line_number": "#4B5563"
+    }
+  },
+  "typography": {
+    "font_family_headings": "Outfit, IBM Plex Sans, sans-serif",
+    "font_family_body": "IBM Plex Sans, Inter, sans-serif",
+    "font_family_code": "'JetBrains Mono', 'Fira Code', monospace",
+    "hierarchy": {
+      "h1": "text-3xl font-bold tracking-tight text-slate-100",
+      "h2": "text-xl font-semibold tracking-tight text-slate-200",
+      "h3": "text-lg font-medium text-slate-300",
+      "subtext": "text-sm text-slate-400 font-normal",
+      "label": "text-xs font-mono uppercase tracking-wider text-slate-400"
+    }
+  },
+  "spacing_and_layout": {
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-6",
+    "card_padding": "p-5 md:p-6",
+    "container_max_width": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "sidebar_width": "w-64 border-r border-slate-800 bg-slate-900/90 backdrop-blur-md"
+  },
+  "key_components": {
+    "diff_viewer": {
+      "style": "side-by-side or unified toggle, line numbers, code syntax highlighting, copy section, collapse unchanged blocks",
+      "font": "font-mono text-xs md:text-sm leading-relaxed"
+    },
+    "node_pair_card": {
+      "style": "card with subtle border, status pulse dot, SSH connection status indicator, quick comparison trigger CTA",
+      "data_points": ["Business Name", "Node 1 IP/Host", "Node 2 IP/Host", "Target Config Path", "Ports", "Last Compared Timestamp", "Freshdesk Status"]
+    },
+    "incident_banner": {
+      "style": "high priority alert toast or bar with direct Freshdesk ticket link, status sync, and escalation actions"
+    }
+  },
+  "testing_and_accessibility": {
+    "mandatory_data_testid_convention": "kebab-case, role-based, e.g., data-testid='trigger-compare-btn-node-1'",
+    "wcag_contrast": "APCA high contrast dark mode compliance with minimum 4.5:1 ratio for status badges and text",
+    "aria_labels": "Explicit labels for diff line toggles, live execution logs, and modal triggers"
+  },
+  "instructions_to_main_agent": "1. Ensure JWT auth guard wraps all dashboard routes.\n2. Implement SSH live connection mock/real trigger with visual loading spinner and step logs (Connecting -> Fetching /etc/nginx -> Diffing -> Completed).\n3. Provide realistic Nginx config templates (e.g. upstream blocks, server ssl settings, location /api routing) with subtle drift (e.g., worker_connections, proxy_pass port difference, SSL cipher mismatch).\n4. Include Freshdesk ticket creation dialog modal allowing automated subject/description populating with drift details.\n5. Keep all code clean, structured into modular components, and adhere strictly to data-testid convention."
+}
