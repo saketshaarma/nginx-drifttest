@@ -7,6 +7,8 @@ const MAP = {
   drift: { label: "Config Drift", cls: "text-red-400 bg-red-500/10 border-red-500/30" },
   "only-node1": { label: "Node 1 Only", cls: "text-amber-400 bg-amber-500/10 border-amber-500/30" },
   "only-node2": { label: "Node 2 Only", cls: "text-violet-400 bg-violet-500/10 border-violet-500/30" },
+  "only-dc": { label: "DC Only", cls: "text-amber-400 bg-amber-500/10 border-amber-500/30" },
+  "only-dr": { label: "DR Only", cls: "text-violet-400 bg-violet-500/10 border-violet-500/30" },
   running: { label: "Running", cls: "text-sky-400 bg-sky-500/10 border-sky-500/30" },
   failed: { label: "Failed", cls: "text-rose-400 bg-rose-500/10 border-rose-500/30" },
   open: { label: "Open", cls: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30" },

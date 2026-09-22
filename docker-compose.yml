@@ -1,0 +1,54 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - driftwatch
+    # Uncomment to inspect the DB from the host:
+    # ports:
+    #   - "27017:27017"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URL: "mongodb://mongo:27017"
+      DB_NAME: "${DB_NAME:-driftwatch}"
+      JWT_SECRET: "${JWT_SECRET}"
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@driftwatch.io}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin123}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
+      FRESHDESK_DOMAIN: "${FRESHDESK_DOMAIN:-demo.freshdesk.com}"
+      FRESHDESK_API_KEY: "${FRESHDESK_API_KEY:-MOCK_KEY}"
+      CORS_ORIGINS: "${FRONTEND_URL:-http://localhost:8080}"
+    networks:
+      - driftwatch
+    # Backend is reached via the frontend nginx proxy; expose directly only if needed:
+    # ports:
+    #   - "8001:8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty = same-origin: the app calls "/api", nginx proxies to backend.
+        REACT_APP_BACKEND_URL: "${REACT_APP_BACKEND_URL:-}"
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - driftwatch
+
+volumes:
+  mongo_data:
+
+networks:
+  driftwatch:
+    driver: bridge

@@ -6,7 +6,7 @@ import os
 import uuid
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, BackgroundTasks
 from starlette.middleware.cors import CORSMiddleware
@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from db import db, encrypt_secret
 from auth import auth_router, get_current_user, seed_admin
-from comparison import execute_comparison
+from comparison import execute_comparison, start_comparison
 from scheduler import scheduler, schedule_node_pair, remove_node_pair_job, load_all_schedules, start_scheduler
 
 logging.basicConfig(level=logging.INFO,
@@ -34,29 +34,31 @@ class BusinessInput(BaseModel):
     description: str = ""
 
 
+class DcDrPair(BaseModel):
+    id: Optional[str] = None
+    dc_node: str
+    dr_node: str
+    port_dc: int = 22
+    port_dr: int = 22
+
+
 class NodePairInput(BaseModel):
     business_id: str
     name: str
-    node1: str
-    node2: str
-    port1: int = 22
-    port2: int = 22
     folder: str = "/etc/nginx"
     ssh_username: str
     ssh_password: str = ""
+    pairs: List[DcDrPair] = []
     schedule_enabled: bool = False
     schedule_interval_minutes: int = 60
 
 
 class NodePairUpdate(BaseModel):
     name: Optional[str] = None
-    node1: Optional[str] = None
-    node2: Optional[str] = None
-    port1: Optional[int] = None
-    port2: Optional[int] = None
     folder: Optional[str] = None
     ssh_username: Optional[str] = None
     ssh_password: Optional[str] = None
+    pairs: Optional[List[DcDrPair]] = None
     schedule_enabled: Optional[bool] = None
     schedule_interval_minutes: Optional[int] = None
 
@@ -144,18 +146,24 @@ async def create_node_pair(payload: NodePairInput, user: dict = Depends(get_curr
     business = await db.businesses.find_one({"id": payload.business_id})
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
+    if not payload.pairs:
+        raise HTTPException(status_code=400, detail="Add at least one DC↔DR pair")
+    pairs = []
+    for p in payload.pairs:
+        pairs.append({
+            "id": p.id or str(uuid.uuid4()),
+            "dc_node": p.dc_node, "dr_node": p.dr_node,
+            "port_dc": p.port_dc, "port_dr": p.port_dr,
+        })
     doc = {
         "id": str(uuid.uuid4()),
         "business_id": payload.business_id,
         "business_name": business["name"],
         "name": payload.name,
-        "node1": payload.node1,
-        "node2": payload.node2,
-        "port1": payload.port1,
-        "port2": payload.port2,
         "folder": payload.folder,
         "ssh_username": payload.ssh_username,
         "ssh_password_enc": encrypt_secret(payload.ssh_password),
+        "pairs": pairs,
         "schedule_enabled": payload.schedule_enabled,
         "schedule_interval_minutes": payload.schedule_interval_minutes,
         "last_run_at": None,
@@ -187,6 +195,12 @@ async def update_node_pair(pair_id: str, payload: NodePairUpdate, user: dict = D
         if key == "ssh_password":
             if value:
                 updates["ssh_password_enc"] = encrypt_secret(value)
+        elif key == "pairs":
+            updates["pairs"] = [{
+                "id": (p.get("id") or str(uuid.uuid4())),
+                "dc_node": p["dc_node"], "dr_node": p["dr_node"],
+                "port_dc": p.get("port_dc", 22), "port_dr": p.get("port_dr", 22),
+            } for p in value]
         else:
             updates[key] = value
     if updates:
@@ -208,7 +222,7 @@ async def trigger_compare(pair_id: str, user: dict = Depends(get_current_user)):
     p = await db.node_pairs.find_one({"id": pair_id})
     if not p:
         raise HTTPException(status_code=404, detail="Node pair not found")
-    run = await execute_comparison(pair_id, triggered_by="manual")
+    run = await start_comparison(pair_id, triggered_by="manual")
     return clean_doc(run)
 
 
@@ -217,9 +231,9 @@ async def trigger_compare(pair_id: str, user: dict = Depends(get_current_user)):
 # ============================================================
 
 @api_router.get("/runs")
-async def list_runs(node_pair_id: Optional[str] = None, limit: int = 50, user: dict = Depends(get_current_user)):
-    query = {"node_pair_id": node_pair_id} if node_pair_id else {}
-    runs = await db.runs.find(query, {"files": 0, "logs": 0}).sort("started_at", -1).to_list(limit)
+async def list_runs(mapping_id: Optional[str] = None, limit: int = 50, user: dict = Depends(get_current_user)):
+    query = {"mapping_id": mapping_id} if mapping_id else {}
+    runs = await db.runs.find(query, {"pairs": 0}).sort("started_at", -1).to_list(limit)
     return [clean_doc(r) for r in runs]
 
 
@@ -267,11 +281,12 @@ async def dashboard_stats(user: dict = Depends(get_current_user)):
     total_incidents = await db.incidents.count_documents({})
     total_runs = await db.runs.count_documents({})
 
-    recent_runs = await db.runs.find({}, {"files": 0, "logs": 0}).sort("started_at", -1).to_list(8)
+    recent_runs = await db.runs.find({}, {"pairs": 0}).sort("started_at", -1).to_list(8)
     recent_incidents = await db.incidents.find().sort("created_at", -1).to_list(5)
 
     return {
         "total_businesses": total_businesses,
+        "total_mappings": total_pairs,
         "total_node_pairs": total_pairs,
         "drifted_pairs": drifted_pairs,
         "synced_pairs": synced_pairs,

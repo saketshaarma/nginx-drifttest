@@ -12,19 +12,19 @@ function fmt(ts) {
 
 export default function Runs() {
   const [params] = useSearchParams();
-  const nodePairId = params.get("node_pair_id");
+  const mappingId = params.get("mapping_id");
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    const q = nodePairId ? `?node_pair_id=${nodePairId}` : "";
+    const q = mappingId ? `?mapping_id=${mappingId}` : "";
     api.get(`/runs${q}`).then((r) => setRuns(r.data)).finally(() => setLoading(false));
-  }, [nodePairId]);
+  }, [mappingId]);
 
   return (
     <Layout>
-      <PageHeader title="Comparison Runs" subtitle={nodePairId ? "Filtered by node pair" : "Full comparison history"} />
+      <PageHeader title="Comparison Runs" subtitle={mappingId ? "Filtered by mapping" : "Full comparison history"} />
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
         {loading ? (
           <div className="text-slate-500 text-sm">Loading…</div>
@@ -37,7 +37,7 @@ export default function Runs() {
         ) : (
           <div className="rounded-xl border border-slate-800 bg-[#111827] overflow-hidden">
             <div className="grid grid-cols-12 px-5 py-3 border-b border-slate-800 text-[11px] font-mono uppercase tracking-wider text-slate-500">
-              <div className="col-span-4">Node Pair</div>
+              <div className="col-span-4">Mapping</div>
               <div className="col-span-2">Status</div>
               <div className="col-span-2">Trigger</div>
               <div className="col-span-3">Started</div>
@@ -47,8 +47,8 @@ export default function Runs() {
               {runs.map((r) => (
                 <Link key={r.id} to={`/runs/${r.id}`} data-testid={`run-row-${r.id}`} className="grid grid-cols-12 px-5 py-3.5 items-center hover:bg-slate-800/40 transition-colors">
                   <div className="col-span-4 min-w-0">
-                    <div className="text-sm text-slate-200 truncate">{r.node_pair_name}</div>
-                    <div className="text-[11px] text-slate-500">{r.business_name}</div>
+                    <div className="text-sm text-slate-200 truncate">{r.mapping_name}</div>
+                    <div className="text-[11px] text-slate-500">{r.business_name}{r.summary ? ` · ${r.summary.pairs_drifted}/${r.summary.pairs_total} drifted` : ""}</div>
                   </div>
                   <div className="col-span-2"><StatusBadge status={r.status} /></div>
                   <div className="col-span-2 text-xs font-mono text-slate-400">{r.triggered_by}</div>

@@ -125,7 +125,7 @@ export default function Businesses() {
                 <p className="text-sm text-slate-500 mt-1 line-clamp-2 min-h-[20px]">{b.description || "No description"}</p>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
                   <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <Server className="h-3.5 w-3.5" /> {b.node_pair_count} node pair{b.node_pair_count === 1 ? "" : "s"}
+                    <Server className="h-3.5 w-3.5" /> {b.node_pair_count} mapping{b.node_pair_count === 1 ? "" : "s"}
                   </span>
                   <Link to={`/businesses/${b.id}`} data-testid={`open-business-${b.id}`} className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium">
                     Manage <ArrowRight className="h-3 w-3" />

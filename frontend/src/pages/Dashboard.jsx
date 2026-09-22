@@ -57,8 +57,8 @@ export default function Dashboard() {
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard testid="stat-businesses" icon={Building2} label="Businesses" value={stats.total_businesses} accent="text-sky-400" />
-              <StatCard testid="stat-nodepairs" icon={Server} label="Node Pairs" value={stats.total_node_pairs} accent="text-indigo-400" />
-              <StatCard testid="stat-drift" icon={AlertTriangle} label="Drifted Pairs" value={stats.drifted_pairs} accent="text-red-400" />
+              <StatCard testid="stat-nodepairs" icon={Server} label="Mappings" value={stats.total_node_pairs} accent="text-indigo-400" />
+              <StatCard testid="stat-drift" icon={AlertTriangle} label="Drifted Mappings" value={stats.drifted_pairs} accent="text-red-400" />
               <StatCard testid="stat-incidents" icon={GitCompareArrows} label="Open Incidents" value={stats.open_incidents} accent="text-cyan-400" />
             </div>
 
@@ -67,7 +67,7 @@ export default function Dashboard() {
                 <ShieldCheck className="h-8 w-8 text-emerald-400" />
                 <div>
                   <div className="text-2xl font-display font-bold text-slate-100">{stats.synced_pairs}</div>
-                  <div className="text-xs text-slate-500">Synced node pairs</div>
+                  <div className="text-xs text-slate-500">Synced mappings</div>
                 </div>
               </div>
               <div className="rounded-xl border border-slate-800 bg-[#111827] p-5 flex items-center gap-4">
@@ -101,7 +101,7 @@ export default function Dashboard() {
                   {stats.recent_runs.map((r) => (
                     <Link key={r.id} to={`/runs/${r.id}`} className="flex items-center justify-between px-5 py-3 hover:bg-slate-800/40 transition-colors">
                       <div className="min-w-0">
-                        <div className="text-sm text-slate-200 truncate">{r.node_pair_name}</div>
+                        <div className="text-sm text-slate-200 truncate">{r.mapping_name}</div>
                         <div className="text-[11px] text-slate-500 font-mono">{r.business_name} · {r.triggered_by}</div>
                       </div>
                       <StatusBadge status={r.status} />
