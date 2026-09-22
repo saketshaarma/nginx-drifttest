@@ -99,6 +99,10 @@ def _unified(path, c1, c2, n1, n2):
 
 async def seed_demo(user_email: str):
     """Create a realistic demo business, node pair and comparison run with drift + incident."""
+    existing = await db.businesses.find_one({"name": "Acme Corp (Demo)"})
+    if existing:
+        run = await db.runs.find_one({"business_id": existing["id"]})
+        return {"business_id": existing["id"], "run_id": run["id"] if run else None, "already_seeded": True}
     business_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     await db.businesses.insert_one({

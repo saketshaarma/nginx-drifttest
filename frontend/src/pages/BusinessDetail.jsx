@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -64,6 +64,7 @@ function NodePairDialog({ open, onOpenChange, businessId, editing, onSaved }) {
       <DialogContent className="bg-[#111827] border-slate-800 text-slate-200 max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display">{editing ? "Edit Node Pair" : "New Node Pair"}</DialogTitle>
+          <DialogDescription className="text-slate-500 text-sm">Map two nginx nodes and the config folder to compare over SSH.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <Field label="Mapping Name">

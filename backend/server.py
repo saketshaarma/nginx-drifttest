@@ -244,6 +244,8 @@ async def list_incidents(status: Optional[str] = None, user: dict = Depends(get_
 
 @api_router.put("/incidents/{incident_id}/status")
 async def update_incident_status(incident_id: str, status: str, user: dict = Depends(get_current_user)):
+    if status not in {"open", "resolved", "closed"}:
+        raise HTTPException(status_code=400, detail="Invalid status")
     res = await db.incidents.update_one({"id": incident_id}, {"$set": {"status": status}})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Incident not found")

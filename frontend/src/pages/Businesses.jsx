@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -63,6 +63,7 @@ export default function Businesses() {
           <DialogContent className="bg-[#111827] border-slate-800 text-slate-200">
             <DialogHeader>
               <DialogTitle className="font-display">Create Business</DialogTitle>
+              <DialogDescription className="text-slate-500 text-sm">Group your nginx node pairs under a business unit.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-1.5">
