@@ -1,0 +1,15 @@
+{
+  "summary": "Retest of iteration_6 fnmatch bug fix in comparison._is_excluded plus full backend regression. All 31 pytest cases passed (exclusion unit set incl. test_ssl_key_glob_only_one_level, auth/cookies/encryption/node-pairs/async-compare/incidents, exclude_patterns API POST/GET/PUT round-trip, freshdesk real-path with mocked httpx + 401/network mock fallback, create_freshdesk_incident mock branch). Live regression on hosted preview: login admin@driftwatch.io/admin123 -> 200, GET /api/dashboard/stats -> 200, POST /api/demo/seed idempotent (called twice) -> 200/200.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_freshdesk_and_exclude_unit.py", "/app/backend/tests/test_exclude_patterns_api.py", "/app/backend/tests/backend_test.py", "/app/backend/tests/test_cookie_params.py", "/app/backend/tests/test_https_cookie_regression.py", "/app/backend/tests/test_encryption_key_robustness.py", "/app/test_reports/pytest/pytest_iter7.xml"],
+  "action_items": [],
+  "critical_code_review_comments": ["_is_excluded now correctly delegates to pathlib.PurePosixPath.match ensuring '*' does not cross '/'. Slash-less patterns still match basename at any depth (documented behavior). Non-glob exact/dir-prefix branch handles 'backup/', 'conf.d/local.conf', 'nginx.conf' correctly."],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "n/a (skipped per request)"},
+  "test_credentials": "admin@driftwatch.io / admin123 (works)",
+  "seed_data_creation": "POST /api/demo/seed invoked twice; idempotent, both 200",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "iteration_6 fnmatch bug fully resolved. 31/31 backend tests green. Freshdesk on hosted preview runs in MOCK_KEY mode (mock=True). Real-path branch is exercised only in unit tests via mocked httpx."
+}

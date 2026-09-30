@@ -27,18 +27,17 @@ User has a Python script (compare_nodes.py) that SSHes into pairs of nginx nodes
 - Incident management (status open/resolved/closed).
 
 ## Implemented (2026-06)
-- JWT auth (login/register/logout/me/refresh, brute-force lockout, seeded admin). [done]
+- JWT auth (login/register/logout/me/refresh, brute-force lockout, seeded admin); adaptive cookie flags (HTTPS→Secure/None, HTTP→Lax) for self-hosting; ENCRYPTION_KEY accepts any string (derives a valid Fernet key). [done]
 - Business CRUD. [done]
-- **Mapping** model = shared folder + SSH creds + list of **DC↔DR node pairs** (add/remove many); CRUD with encrypted SSH passwords. [done]
-- Real paramiko SSH comparison engine (SHA256 + unified diff) comparing every DC↔DR pair; runs **async in background** (endpoint returns a 'running' run instantly, Run Detail polls to completion). [done]
+- **Mapping** = shared folder + SSH creds + list of **DC↔DR node pairs** + **exclude_patterns**; CRUD with encrypted SSH passwords. [done]
+- **File exclusions**: glob patterns (segment-aware, `*` does not cross `/`; slash-less matches basename at any depth; `dir/` and exact-path excludes). Skipped files reported as `excluded` per pair. [done]
+- Real paramiko SSH comparison (SHA256 + unified diff) across every DC↔DR pair; async background run + polling. [done]
 - Scheduled comparisons (APScheduler, per-mapping interval). [done]
-- Runs history + Run Detail with **per-pair selector**, diff viewer, file filters, execution log, aggregated summary. [done]
-- Mocked Freshdesk incident: **one incident per mapping run** summarizing all drifted DC↔DR pairs; Incidents page with status management. [done]
-- Dashboard stats + recent runs/incidents. [done]
-- Demo seed (idempotent) — 2-pair mapping (1 drift, 1 identical) for instant AHA. [done]
-- Stuck-run reaper on startup; stable React keys for pair rows. [done]
-- **Production Docker setup**: backend Dockerfile, multi-stage frontend Dockerfile (nginx serving built SPA + /api proxy), docker-compose (mongo+backend+frontend), .env.example, DEPLOYMENT.md. [done]
-- Tested: backend 8/8, all critical frontend flows.
+- **Freshdesk**: real ticket creation via REST API v2 (`POST /api/v2/tickets`, Basic auth key:X, retries on 429/5xx) when FRESHDESK_DOMAIN+FRESHDESK_API_KEY are set; clearly-flagged mock fallback otherwise or on API error; incident stores real ticket id + `/a/tickets/{id}` URL. UI shows MOCKED tag only when mocked. [done]
+- Runs history + Run Detail (per-pair selector, diff viewer, filters, logs, aggregated summary). One incident per drifted run. [done]
+- Dashboard stats; idempotent demo seed; stuck-run reaper. [done]
+- Production Docker (backend + nginx-served frontend + mongo compose, requirements.docker.txt, .env.example, DEPLOYMENT.md). [done]
+- Tested: backend 31/31 (100%).
 
 ## Backlog
 - P1: Real Freshdesk API integration (domain + API key) replacing the mock.
