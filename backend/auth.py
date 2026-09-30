@@ -161,8 +161,9 @@ async def login(payload: LoginInput, request: Request, response: Response):
 
 @auth_router.post("/logout")
 async def logout(response: Response, current_user: dict = Depends(get_current_user)):
-    response.delete_cookie("access_token", path="/")
-    response.delete_cookie("refresh_token", path="/")
+    flags = cookie_params()
+    response.delete_cookie("access_token", path="/", **flags)
+    response.delete_cookie("refresh_token", path="/", **flags)
     return {"message": "Logged out"}
 
 

@@ -1,0 +1,27 @@
+{
+  "summary": "Verified the cookie-scheme fix. Added tests/test_cookie_params.py (unit-tests auth.cookie_params() with importlib.reload for http, http+IP, https, and empty FRONTEND_URL) and tests/test_https_cookie_regression.py (hosted preview: login sets access_token with Secure; SameSite=None; HttpOnly and /api/auth/me works). Ran full pytest suite: 13/13 passed in 64s. Existing backend regression (auth, businesses, node-pairs, demo seed, dashboard, runs, incidents, async compare, invalid incident status) all green — fix did not regress hosted HTTPS behavior.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_cookie_params.py",
+    "/app/backend/tests/test_https_cookie_regression.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "auth.cookie_params() only checks prefix 'https://' — a FRONTEND_URL like 'HTTPS://...' (uppercase) or with a leading space would fall through to non-secure. Minor, low risk given env is controlled.",
+    "logout endpoint deletes cookies without passing the same secure/samesite flags used to set them; some browsers require matching attributes to clear cookies. Not a bug for functionality but worth aligning."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_cookie_params.py (new)",
+    "/app/backend/tests/test_https_cookie_regression.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "N/A (skipped per request)"},
+  "test_credentials": "admin@driftwatch.io / admin123",
+  "seed_data_creation": "Used existing /api/demo/seed endpoint invoked by existing tests; created + deleted TEST_biz/TEST_np during business CRUD test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Cookie-scheme fix is fully covered: unit tests reload auth module across http/https FRONTEND_URL values and assert exact flags dict; HTTPS regression asserts real Set-Cookie header contains Secure, SameSite=None, HttpOnly. teardown restores env for other tests. All 13 backend tests pass.",
+  "rca of the issue": "Original bug: set_cookie hardcoded secure=True, samesite='none'. Browsers drop such cookies over plain HTTP on non-localhost origins, so docker-compose HTTP self-hosted deployments logged in with 200 but never persisted the session. Fix introduces cookie_params() that inspects FRONTEND_URL scheme: https -> Secure+None, otherwise -> non-Secure+Lax. Unit tests confirm both branches; hosted HTTPS regression confirms preview still gets Secure;SameSite=None and /me returns admin."
+}
