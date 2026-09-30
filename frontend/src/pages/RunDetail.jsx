@@ -109,8 +109,11 @@ export default function RunDetail() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-cyan-400 mt-0.5" />
               <div className="flex-1">
-                <div className="text-sm text-slate-100 font-medium">Freshdesk incident raised <span className="text-[10px] font-mono uppercase bg-slate-700/60 rounded px-1.5 py-0.5 ml-1 text-slate-300">MOCKED</span></div>
+                <div className="text-sm text-slate-100 font-medium">Freshdesk incident raised {incident.mocked && <span className="text-[10px] font-mono uppercase bg-slate-700/60 rounded px-1.5 py-0.5 ml-1 text-slate-300">MOCKED</span>}</div>
                 <div className="text-xs text-slate-400 mt-1">{incident.subject}</div>
+                {incident.mocked && incident.freshdesk_error && (
+                  <div className="text-[11px] text-amber-400/90 mt-1">Freshdesk not created ({incident.freshdesk_error}); showing a mock ticket.</div>
+                )}
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs font-mono text-cyan-400">{incident.freshdesk_ticket_id}</span>
                   <a href={incident.freshdesk_url} target="_blank" rel="noreferrer" className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1">

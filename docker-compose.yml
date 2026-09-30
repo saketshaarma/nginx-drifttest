@@ -23,8 +23,9 @@ services:
       ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@driftwatch.io}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin123}"
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
-      FRESHDESK_DOMAIN: "${FRESHDESK_DOMAIN:-demo.freshdesk.com}"
+      FRESHDESK_DOMAIN: "${FRESHDESK_DOMAIN:-yourcompany.freshdesk.com}"
       FRESHDESK_API_KEY: "${FRESHDESK_API_KEY:-MOCK_KEY}"
+      FRESHDESK_REQUESTER_EMAIL: "${FRESHDESK_REQUESTER_EMAIL:-}"
       CORS_ORIGINS: "${FRONTEND_URL:-http://localhost:8080}"
     networks:
       - driftwatch

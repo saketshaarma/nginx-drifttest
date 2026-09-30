@@ -49,6 +49,7 @@ class NodePairInput(BaseModel):
     ssh_username: str
     ssh_password: str = ""
     pairs: List[DcDrPair] = []
+    exclude_patterns: List[str] = []
     schedule_enabled: bool = False
     schedule_interval_minutes: int = 60
 
@@ -59,6 +60,7 @@ class NodePairUpdate(BaseModel):
     ssh_username: Optional[str] = None
     ssh_password: Optional[str] = None
     pairs: Optional[List[DcDrPair]] = None
+    exclude_patterns: Optional[List[str]] = None
     schedule_enabled: Optional[bool] = None
     schedule_interval_minutes: Optional[int] = None
 
@@ -164,6 +166,7 @@ async def create_node_pair(payload: NodePairInput, user: dict = Depends(get_curr
         "ssh_username": payload.ssh_username,
         "ssh_password_enc": encrypt_secret(payload.ssh_password),
         "pairs": pairs,
+        "exclude_patterns": [p.strip() for p in payload.exclude_patterns if p.strip()],
         "schedule_enabled": payload.schedule_enabled,
         "schedule_interval_minutes": payload.schedule_interval_minutes,
         "last_run_at": None,
@@ -201,6 +204,8 @@ async def update_node_pair(pair_id: str, payload: NodePairUpdate, user: dict = D
                 "dc_node": p["dc_node"], "dr_node": p["dr_node"],
                 "port_dc": p.get("port_dc", 22), "port_dr": p.get("port_dr", 22),
             } for p in value]
+        elif key == "exclude_patterns":
+            updates["exclude_patterns"] = [p.strip() for p in value if p.strip()]
         else:
             updates[key] = value
     if updates:

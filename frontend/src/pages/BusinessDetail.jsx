@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -22,7 +23,7 @@ import {
 const emptyPair = () => ({ _key: crypto.randomUUID(), dc_node: "", dr_node: "", port_dc: 22, port_dr: 22 });
 const EMPTY = {
   name: "", folder: "/etc/nginx", ssh_username: "", ssh_password: "",
-  pairs: [emptyPair()], schedule_enabled: false, schedule_interval_minutes: 60,
+  pairs: [emptyPair()], exclude_patterns: [], schedule_enabled: false, schedule_interval_minutes: 60,
 };
 
 function Field({ label, children }) {
@@ -43,6 +44,7 @@ function MappingDialog({ open, onOpenChange, businessId, editing, onSaved }) {
       setForm({
         ...EMPTY, ...editing, ssh_password: "",
         pairs: editing.pairs?.length ? editing.pairs.map((p) => ({ ...p, _key: crypto.randomUUID() })) : [emptyPair()],
+        exclude_patterns: editing.exclude_patterns || [],
       });
     } else {
       setForm({ ...EMPTY, pairs: [emptyPair()] });
@@ -134,6 +136,20 @@ function MappingDialog({ open, onOpenChange, businessId, editing, onSaved }) {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-800 bg-[#0B0F19] p-3 space-y-2">
+            <Field label="Exclude files from comparison (one glob per line)">
+              <Textarea
+                data-testid="np-exclude-input"
+                value={(form.exclude_patterns || []).join("\n")}
+                onChange={(e) => set("exclude_patterns", e.target.value.split("\n"))}
+                placeholder={"*.log\nssl/*.key\nconf.d/local.conf"}
+                rows={3}
+                className="bg-[#111827] border-slate-700 font-mono text-sm"
+              />
+            </Field>
+            <p className="text-[11px] text-slate-500">Matches by full relative path or filename. e.g. <span className="font-mono">*.log</span>, <span className="font-mono">ssl/*.key</span>, <span className="font-mono">conf.d/local.conf</span></p>
           </div>
 
           <div className="rounded-lg border border-slate-800 bg-[#0B0F19] p-3 space-y-3">
@@ -260,6 +276,11 @@ export default function BusinessDetail() {
                   <span className="text-slate-600">·</span>
                   <span className="text-xs">{m.pairs?.length || 0} DC↔DR pair{(m.pairs?.length || 0) === 1 ? "" : "s"}</span>
                 </div>
+                {m.exclude_patterns?.length > 0 && (
+                  <div className="mt-1.5 text-[11px] text-slate-500 font-mono" data-testid={`exclude-info-${m.id}`}>
+                    excludes: {m.exclude_patterns.join(", ")}
+                  </div>
+                )}
 
                 <div className="mt-3 space-y-1.5 max-h-32 overflow-y-auto pr-1">
                   {m.pairs?.map((p) => (

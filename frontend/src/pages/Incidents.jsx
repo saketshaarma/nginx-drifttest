@@ -73,7 +73,7 @@ export default function Incidents() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono text-cyan-400">{i.freshdesk_ticket_id}</span>
                       <StatusBadge status={i.status} />
-                      <span className="text-[10px] font-mono uppercase bg-slate-700/60 rounded px-1.5 py-0.5 text-slate-400">MOCKED</span>
+                      {i.mocked && <span className="text-[10px] font-mono uppercase bg-slate-700/60 rounded px-1.5 py-0.5 text-slate-400">MOCKED</span>}
                     </div>
                     <div className="text-sm text-slate-200 mt-1 truncate">{i.subject}</div>
                     <div className="text-[11px] text-slate-500 mt-0.5">{i.business_name} · {fmt(i.created_at)}</div>

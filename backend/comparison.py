@@ -5,10 +5,12 @@ import posixpath
 import stat
 import difflib
 import uuid
+import fnmatch
 from datetime import datetime, timezone
 
 import paramiko
 
+import freshdesk
 from db import db, decrypt_secret
 
 MAX_DIFF_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -100,8 +102,25 @@ def _summarize(files):
     return s
 
 
-def _compare_single(pair, folder, username, password):
+def _is_excluded(path, patterns):
+    if not patterns:
+        return False
+    base = posixpath.basename(path)
+    for pat in patterns:
+        pat = (pat or "").strip()
+        if not pat:
+            continue
+        if fnmatch.fnmatch(path, pat) or fnmatch.fnmatch(base, pat):
+            return True
+        # allow directory-prefix excludes like "ssl/" or "conf.d"
+        if path == pat or path.startswith(pat.rstrip("/") + "/"):
+            return True
+    return False
+
+
+def _compare_single(pair, folder, username, password, exclude_patterns=None):
     """Blocking SSH comparison of one DC<->DR pair. Returns a pair result dict."""
+    exclude_patterns = exclude_patterns or []
     dc_node = pair["dc_node"]
     dr_node = pair["dr_node"]
     port_dc = int(pair.get("port_dc") or 22)
@@ -111,6 +130,7 @@ def _compare_single(pair, folder, username, password):
         "pair_id": pair["id"], "dc_node": dc_node, "dr_node": dr_node,
         "port_dc": port_dc, "port_dr": port_dr,
         "status": "identical", "error": None, "summary": None, "files": [], "logs": [],
+        "excluded": 0,
     }
     c_dc = c_dr = s_dc = s_dr = None
     try:
@@ -132,6 +152,12 @@ def _compare_single(pair, folder, username, password):
         result["logs"].append(f"DR {dr_node}: {len(files_dr)} files")
 
         all_paths = sorted(set(files_dc.keys()) | set(files_dr.keys()))
+        if exclude_patterns:
+            kept = [p for p in all_paths if not _is_excluded(p, exclude_patterns)]
+            result["excluded"] = len(all_paths) - len(kept)
+            all_paths = kept
+            if result["excluded"]:
+                result["logs"].append(f"Excluded {result['excluded']} file(s) by pattern")
         for path in all_paths:
             fdc = files_dc.get(path)
             fdr = files_dr.get(path)
@@ -175,9 +201,10 @@ def _compare_mapping_sync(mapping):
     folder = mapping["folder"]
     username = mapping["ssh_username"]
     password = decrypt_secret(mapping.get("ssh_password_enc", ""))
+    exclude_patterns = mapping.get("exclude_patterns", [])
     pairs_out = []
     for pair in mapping.get("pairs", []):
-        pairs_out.append(_compare_single(pair, folder, username, password))
+        pairs_out.append(_compare_single(pair, folder, username, password, exclude_patterns))
     return pairs_out
 
 
@@ -204,26 +231,36 @@ def _aggregate(pairs):
 
 async def create_freshdesk_incident(mapping, run, agg):
     incident_id = str(uuid.uuid4())
-    ticket = f"FD-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{incident_id[:6].upper()}"
     drifted = [p for p in run["pairs"] if p["status"] == "drift"]
 
     lines = []
     for p in drifted:
         s = p.get("summary") or {}
         changed = [f["path"] for f in p["files"] if f["status"] != "identical"]
-        lines.append(f"  • {p['dc_node']}  ↔  {p['dr_node']}  —  {s.get('drift', 0)} file(s) differ")
+        lines.append(f"  • {p['dc_node']}  <->  {p['dr_node']}  —  {s.get('drift', 0)} file(s) differ")
         for c in changed[:20]:
             lines.append(f"      - {c}")
 
+    subject = f"[Config Drift] {mapping['name']} — {agg['pairs_drifted']} DC/DR pair(s) drifted"
     description = (
         "Nginx configuration drift detected between DC and DR nodes.\n\n"
         f"Business: {mapping.get('business_name', '')}\n"
         f"Mapping: {mapping['name']}\n"
         f"Config folder: {mapping['folder']}\n\n"
-        f"{agg['pairs_drifted']} of {agg['pairs_total']} DC↔DR pair(s) drifted "
+        f"{agg['pairs_drifted']} of {agg['pairs_total']} DC/DR pair(s) drifted "
         f"({agg['different']} different, {agg['only_dc']} only on DC, {agg['only_dr']} only on DR).\n\n"
         "Drifted pairs:\n" + "\n".join(lines)
     )
+
+    result = await freshdesk.create_ticket(subject, description, priority="high", status="open")
+
+    if not result["mock"]:
+        ticket_id = result["ticket_id"]
+        ticket_url = result["url"]
+    else:
+        ticket_id = f"FD-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{incident_id[:6].upper()}"
+        ticket_url = freshdesk.mock_url(ticket_id)
+
     doc = {
         "id": incident_id,
         "run_id": run["id"],
@@ -231,14 +268,15 @@ async def create_freshdesk_incident(mapping, run, agg):
         "business_id": mapping["business_id"],
         "business_name": mapping.get("business_name", ""),
         "mapping_name": mapping["name"],
-        "freshdesk_ticket_id": ticket,
-        "freshdesk_url": f"https://{os.environ.get('FRESHDESK_DOMAIN', 'demo.freshdesk.com')}/a/tickets/{ticket}",
-        "subject": f"[Config Drift] {mapping['name']} — {agg['pairs_drifted']} DC↔DR pair(s) drifted",
+        "freshdesk_ticket_id": ticket_id,
+        "freshdesk_url": ticket_url,
+        "subject": subject,
         "description": description,
         "priority": "high",
         "status": "open",
         "drift_count": agg["drift"],
-        "mocked": True,
+        "mocked": result["mock"],
+        "freshdesk_error": result.get("error"),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.incidents.insert_one({**doc})
