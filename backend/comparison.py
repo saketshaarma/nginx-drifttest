@@ -5,7 +5,7 @@ import posixpath
 import stat
 import difflib
 import uuid
-import fnmatch
+from pathlib import PurePosixPath
 from datetime import datetime, timezone
 
 import paramiko
@@ -105,16 +105,21 @@ def _summarize(files):
 def _is_excluded(path, patterns):
     if not patterns:
         return False
-    base = posixpath.basename(path)
+    pp = PurePosixPath(path)
     for pat in patterns:
         pat = (pat or "").strip()
         if not pat:
             continue
-        if fnmatch.fnmatch(path, pat) or fnmatch.fnmatch(base, pat):
+        # directory-prefix or exact-path exclude, e.g. "backup/", "conf.d", "nginx.conf"
+        norm = pat.rstrip("/")
+        if "*" not in pat and "?" not in pat and (path == norm or path.startswith(norm + "/")):
             return True
-        # allow directory-prefix excludes like "ssl/" or "conf.d"
-        if path == pat or path.startswith(pat.rstrip("/") + "/"):
-            return True
+        # glob match where '*' does NOT cross '/'; a slash-less pattern matches the basename at any depth
+        try:
+            if pp.match(pat):
+                return True
+        except (ValueError, IndexError):
+            pass
     return False
 
 
