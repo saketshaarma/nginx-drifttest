@@ -52,6 +52,29 @@ docker compose down -v              # stop + wipe the Mongo volume
 docker compose up -d --build        # rebuild after code changes
 ```
 
+## Troubleshooting
+
+### "I can't log in even with the admin details from my .env"
+Two common causes on a fresh self-hosted deploy:
+
+1. **Serving over plain HTTP (not localhost).** Auth uses cookies. When `FRONTEND_URL`
+   is `http://…`, the app now issues `SameSite=Lax` cookies **without** the `Secure`
+   flag so they persist over HTTP. When `FRONTEND_URL` is `https://…`, it switches to
+   `SameSite=None; Secure`. So make sure `FRONTEND_URL` in `.env` matches how you
+   actually reach the app (scheme included), then `docker compose up -d --build`.
+
+2. **A `$` in `ADMIN_PASSWORD` (or any secret).** docker-compose treats `$` as variable
+   interpolation, so `P@$$w0rd` becomes something else inside the container and won't
+   match what you type. In `.env`, **escape every `$` as `$$`** (e.g. `P@$$$$w0rd`),
+   or use a password without `$`.
+
+After changing `.env`, recreate the backend so the admin is re-seeded with the new value:
+```bash
+docker compose up -d --build backend
+```
+The admin is (re)seeded on every startup: created if missing, and its password updated
+if `ADMIN_PASSWORD` changed.
+
 ## Running behind HTTPS (recommended for production)
 Put a TLS terminator (Caddy, Traefik, or a cloud LB) in front of the `frontend`
 service and point it at port 80. Set `FRONTEND_URL` to your `https://` domain.

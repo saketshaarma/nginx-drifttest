@@ -38,11 +38,26 @@ def create_refresh_token(user_id: str) -> str:
     return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
 
 
+def cookie_params() -> dict:
+    """Adapt cookie security to the deployment scheme.
+
+    HTTPS deployments (e.g. the hosted preview or a TLS domain) need
+    SameSite=None + Secure. Plain-HTTP self-hosted deployments (docker-compose
+    on http://localhost or a server IP) must NOT set Secure, or the browser
+    silently drops the cookie and login appears to fail.
+    """
+    frontend = os.environ.get("FRONTEND_URL", "")
+    if frontend.startswith("https://"):
+        return {"secure": True, "samesite": "none"}
+    return {"secure": False, "samesite": "lax"}
+
+
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
+    flags = cookie_params()
     response.set_cookie(key="access_token", value=access_token, httponly=True,
-                        secure=True, samesite="none", max_age=900, path="/")
+                        max_age=900, path="/", **flags)
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True,
-                        secure=True, samesite="none", max_age=604800, path="/")
+                        max_age=604800, path="/", **flags)
 
 
 def serialize_user(user: dict) -> dict:
@@ -170,7 +185,7 @@ async def refresh_token(request: Request, response: Response):
             raise HTTPException(status_code=401, detail="User not found")
         access = create_access_token(str(user["_id"]), user["email"])
         response.set_cookie(key="access_token", value=access, httponly=True,
-                            secure=True, samesite="none", max_age=900, path="/")
+                            max_age=900, path="/", **cookie_params())
         return {"message": "refreshed"}
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
